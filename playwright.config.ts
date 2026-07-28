@@ -6,7 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
-  testIgnore: '**/proof_of_failure.spec.ts',
+  testIgnore: process.env.RUN_PROOF_OF_FAILURE ? undefined : '**/proof_of_failure.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

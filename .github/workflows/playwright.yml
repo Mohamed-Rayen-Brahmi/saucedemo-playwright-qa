@@ -93,6 +93,8 @@ jobs:
 
       - name: 🔴 Run BROKEN tests (TC-FAIL-001 & TC-FAIL-003) — expect 2 failures
         id: broken_run
+        env:
+          RUN_PROOF_OF_FAILURE: "true"
         run: |
           # Run only the broken tests; we expect this command to exit non-zero
           npx playwright test tests/proof_of_failure.spec.ts \
@@ -110,6 +112,8 @@ jobs:
           fi
 
       - name: ✅ Run FIXED tests (TC-FAIL-002 & TC-FAIL-004) — expect all to pass
+        env:
+          RUN_PROOF_OF_FAILURE: "true"
         run: |
           npx playwright test tests/proof_of_failure.spec.ts \
             --project=chromium \
