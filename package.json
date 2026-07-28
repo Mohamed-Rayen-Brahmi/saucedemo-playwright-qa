@@ -1,0 +1,22 @@
+{
+  "name": "saucedemo-qa-suite",
+  "version": "1.0.0",
+  "description": "Adversarial Playwright/TypeScript QA test suite for SauceDemo",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:chrome": "playwright test --project=chromium",
+    "test:report": "playwright show-report",
+    "test:login": "playwright test tests/login.spec.ts",
+    "test:cart": "playwright test tests/cart.spec.ts",
+    "test:checkout": "playwright test tests/checkout.spec.ts",
+    "test:signup": "playwright test tests/signup.spec.ts",
+    "test:search": "playwright test tests/search.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}

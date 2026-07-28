@@ -1,0 +1,124 @@
+name: 🧪 Playwright QA Suite — SauceDemo
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main, develop]
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-tests:
+    name: Run QA Tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false          # Run all browsers even if one fails
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Node.js ──────────────────────────────────────────────────
+      - name: 🟢 Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── Dependencies ─────────────────────────────────────────────
+      - name: 📦 Install npm dependencies
+        run: npm ci
+
+      # ── Playwright browsers ───────────────────────────────────────
+      - name: 🎭 Install Playwright browsers (${{ matrix.browser }} only)
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      # ── Run tests ────────────────────────────────────────────────
+      - name: 🚀 Run Playwright tests on ${{ matrix.browser }}
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
+
+      # ── Upload HTML report ────────────────────────────────────────
+      - name: 📊 Upload HTML test report
+        uses: actions/upload-artifact@v4
+        if: always()           # Upload even if tests fail
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 30
+
+      # ── Upload traces & screenshots ───────────────────────────────
+      - name: 🖼️ Upload test artifacts (traces / screenshots / videos)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-artifacts-${{ matrix.browser }}
+          path: |
+            test-results/
+          retention-days: 7
+
+  # ── Proof-of-failure job ─────────────────────────────────────────────────
+  proof-of-failure:
+    name: 🔴 Proof-of-failure verification (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🎭 Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: 🔴 Run BROKEN tests (TC-FAIL-001 & TC-FAIL-003) — expect 2 failures
+        id: broken_run
+        run: |
+          # Run only the broken tests; we expect this command to exit non-zero
+          npx playwright test tests/proof_of_failure.spec.ts \
+            --project=chromium \
+            --grep "INTENTIONALLY BROKEN" 2>&1 | tee broken_output.txt || true
+
+      - name: ✅ Verify broken tests actually failed
+        run: |
+          # The output must contain "failed" confirming tests didn't pass
+          if grep -q "failed" broken_output.txt; then
+            echo "✅ CONFIRMED: Broken tests correctly report failures"
+          else
+            echo "❌ UNEXPECTED: Broken tests did not fail — the test suite may be misconfigured"
+            exit 1
+          fi
+
+      - name: ✅ Run FIXED tests (TC-FAIL-002 & TC-FAIL-004) — expect all to pass
+        run: |
+          npx playwright test tests/proof_of_failure.spec.ts \
+            --project=chromium \
+            --grep "FIXED VERSION"
+
+      - name: 📊 Upload proof-of-failure report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proof-of-failure-report
+          path: playwright-report/
+          retention-days: 7
