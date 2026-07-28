@@ -50,6 +50,19 @@ export class InventoryPage {
     return Array.from({ length: count }, (_, i) => buttons.nth(i));
   }
 
+  /**
+   * Adds ALL items to cart by always clicking the first remaining
+   * "Add to cart" button. This avoids stale nth() indices — once a button
+   * is clicked it changes to "Remove" and disappears from the selector,
+   * shifting all subsequent indices.
+   */
+  async addAllItemsToCart() {
+    const totalProducts = await this.inventoryItems.count();
+    for (let i = 0; i < totalProducts; i++) {
+      await this.page.locator('button[data-test^="add-to-cart"]').first().click();
+    }
+  }
+
   async sortBy(value: 'az' | 'za' | 'lohi' | 'hilo') {
     await this.sortDropdown.selectOption(value);
   }

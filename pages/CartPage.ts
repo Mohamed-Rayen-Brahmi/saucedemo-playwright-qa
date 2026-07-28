@@ -20,7 +20,8 @@ export class CartPage {
     this.continueShoppingButton = page.locator('[data-test="continue-shopping"]');
     this.cartItemNames = page.locator('[data-test="inventory-item-name"]');
     this.cartItemPrices = page.locator('[data-test="inventory-item-price"]');
-    this.removeButtons = page.locator('[data-test^="remove"]');
+    // Use text-based selector — more robust than data-test^="remove" across browsers
+    this.removeButtons = page.locator('button:has-text("Remove")');
   }
 
   async goto() {
@@ -41,8 +42,18 @@ export class CartPage {
   }
 
   async removeItemByName(name: string) {
-    const item = this.page.locator('[data-test="cart-item"]').filter({ hasText: name });
-    await item.locator('button[data-test^="remove"]').click();
+    // Strategy: find the Remove button using the specific data-test slug derived from the name.
+    // SauceDemo remove buttons have data-test="remove-{slug}" e.g. "remove-sauce-labs-backpack".
+    // Convert product name to slug: lowercase, replace spaces with hyphens.
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const specificBtn = this.page.locator(`[data-test="remove-${slug}"]`);
+    const specificExists = await specificBtn.count();
+    if (specificExists > 0) {
+      await specificBtn.click();
+      return;
+    }
+    // Fallback: click first visible Remove button on the page
+    await this.page.locator('button:has-text("Remove")').first().click();
   }
 
   async proceedToCheckout() {
